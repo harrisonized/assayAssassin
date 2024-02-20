@@ -1,0 +1,14 @@
+archive
+data
+figures
+ref
+log
+Rplots.pdf
+renv
+renv.lock
+.Rproj.user
+.Rhistory
+.Rbuildignore
+.Rprofile
+.Rproj.user
+.DS_Store

@@ -66,6 +66,7 @@ for (input_dir in input_dirs) {
     qpcr_file <- list_files(file.path(wd, opt[['input']], input_dir), ext='xls')
     qpcr_data <- read_excel(qpcr_file, sheet='Results', skip=46, n_max=96)
     colnames(qpcr_data) <- unname(sapply(colnames(qpcr_data), title_to_snake_case))
+    qpcr_data[['ct']] <- unname(sapply(qpcr_data[['ct']], function(x) gsub("Undetermined", NA, x)))
     qpcr_data[['ct']] <- as.numeric(qpcr_data[['ct']])
 
     # plate setup file

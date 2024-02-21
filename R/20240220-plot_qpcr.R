@@ -9,8 +9,9 @@ import::from(magrittr, '%>%')
 import::from(readxl, 'read_excel')
 import::from(tidyr, 'pivot_wider')
 import::from(ggplot2,
-    'ggplot', 'aes', 'theme', 'labs',  'geom_bar', 'geom_jitter',
-    'guide_axis', 'scale_x_discrete', 'scale_y_log10', 'element_text')
+    'ggplot', 'aes', 'theme', 'labs',  'geom_rect', 'geom_jitter',
+    'guide_axis', 'scale_x_discrete', 'scale_y_log10', 'scale_fill_manual', 'element_text',
+    'stage')
 
 import::from(file.path(wd, 'R', 'tools', 'df_tools.R'),
     'df_to_plate', 'set_index', 'reset_index', 'rev_df', .character_only=TRUE)
@@ -142,13 +143,26 @@ for (sample_gene in sample_genes) {
 
 ct_wide <- ct_wide[order(ct_wide[['fold_change_dnase1l1_actin']], decreasing = TRUE),]
 ct_wide <- reset_index(ct_wide)
-ct_wide <- ct_wide[!is.na(ct_wide['sample_name']), ]
-
 
 # manually filter
 ct_wide <- ct_wide[(ct_wide['fold_change_dnase1l1_actin'] <= 1), ]
 ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]  # low quality
+ct_wide <- ct_wide[!is.na(ct_wide['sample_name']), ]
 
+
+# barsize
+barsize <- ct_wide %>%
+    group_by(tissue) %>%
+    summarize(min_fold_change=min(fold_change_dnase1l1_actin, na.rm=TRUE),
+              max_fold_change=max(fold_change_dnase1l1_actin, na.rm=TRUE))
+
+ct_wide <- merge(
+    ct_wide,
+    barsize,
+    by='tissue',
+    all.x=TRUE,
+    all.y=FALSE 
+)
 
 # ----------------------------------------------------------------------
 # Plot
@@ -158,12 +172,22 @@ log_print(paste(Sys.time(), 'Plotting...'))
 ggplot(
     ct_wide,
     aes(x=reorder(.data[['tissue']], .data[['fold_change_dnase1l1_actin']], decreasing=TRUE),
-        y=.data[['fold_change_dnase1l1_actin']],
-        fill=.data[['tissue']])) +
-    geom_bar(stat="identity", position = "dodge") +
-    geom_jitter() +
+        y=.data[['fold_change_dnase1l1_actin']]), na.rm=TRUE) +
+    # see: https://stackoverflow.com/questions/32642856/how-do-i-use-geom-rect-with-discrete-axis-values
+    geom_rect(
+        aes(xmin = stage(
+                reorder(.data[['tissue']], .data[['fold_change_dnase1l1_actin']], decreasing=TRUE),
+                after_scale = xmin-0.45),
+            xmax = stage(
+                reorder(.data[['tissue']], .data[['fold_change_dnase1l1_actin']], decreasing=TRUE),
+                after_scale = xmax+0.45),
+            ymin = .data[['min_fold_change']],
+            ymax = .data[['max_fold_change']]),
+            fill="#7f7f7f",
+            stat='identity', inherit.aes=TRUE) +
+    geom_jitter(aes(colour=.data[['sample_name']])) +
     labs(x='Tissue', y='Fold Change', title="Relative Expression of Dnase1l1 vs. Actin") +
-    theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position='none') +
+    theme(axis.text.x = element_text(angle = 45, hjust=1)) +
     scale_y_log10()
 
 savefig(file.path(wd, opt[['output']], paste0('relative_expression.png')),

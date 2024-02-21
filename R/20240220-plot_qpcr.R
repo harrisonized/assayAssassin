@@ -144,11 +144,10 @@ for (sample_gene in sample_genes) {
 ct_wide <- ct_wide[order(ct_wide[['fold_change_dnase1l1_actin']], decreasing = TRUE),]
 ct_wide <- reset_index(ct_wide)
 
-# manually filter
+# manual filters
+ct_wide <- ct_wide[(ct_wide['stdev_ct_dnase1l1'] <= 2), ]
 ct_wide <- ct_wide[(ct_wide['fold_change_dnase1l1_actin'] <= 1), ]
-ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]  # low quality
-ct_wide <- ct_wide[!is.na(ct_wide['sample_name']), ]
-
+ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]
 
 # barsize
 barsize <- ct_wide %>%
@@ -163,6 +162,9 @@ ct_wide <- merge(
     all.x=TRUE,
     all.y=FALSE 
 )
+
+ct_wide <- ct_wide[!is.na(ct_wide['sample_name']), ]
+
 
 # ----------------------------------------------------------------------
 # Plot

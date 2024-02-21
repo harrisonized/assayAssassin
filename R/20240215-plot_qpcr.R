@@ -12,7 +12,6 @@ import::from(ggplot2,
     'ggplot', 'aes', 'theme', 'labs',  'geom_bar', 'geom_jitter',
     'guide_axis', 'scale_x_discrete', 'scale_y_log10', 'element_text')
 
-
 import::from(file.path(wd, 'R', 'tools', 'df_tools.R'),
     'reset_index', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'tools', 'file_io.R'),
@@ -30,17 +29,13 @@ import::from(file.path(wd, 'R', 'tools', 'plotting.R'),
 
 # args
 option_list = list(
-    make_option(c("-i", "--input-file"), default='data/20240213-harrison-12172.xls',
-                metavar='data/20240213-harrison-12172.xls',
-                type="character",help="path/to/input/file"),
+    make_option(c("-i", "--input"), default='data/input',
+                metavar='data/input',
+                type="character",help="path/to/input/dir"),
    
-    make_option(c("-o", "--output-dir"), default="figures/20240215-first-pass",
+    make_option(c("-o", "--output"), default="figures/20240215-first-pass",
                 metavar="figures", type="character",
                 help="set the output directory for the data"),
-
-    make_option(c("-s", "--plate-setup"), default="data/plate-setup.csv",
-                metavar="data/plate-setup.csv", type="character",
-                help=""),
 
     make_option(c("-t", "--troubleshooting"), default=FALSE, action="store_true",
                 metavar="FALSE", type="logical",
@@ -62,19 +57,19 @@ log_print(paste('Script started at:', start_time))
 
 log_print(paste(Sys.time(), 'Reading data...'))
 
-input_dirs <- items_in_a_not_b(list.dirs(file.path(wd, 'data'), full.names=FALSE), '')
+input_dirs <- items_in_a_not_b(list.dirs(file.path(wd, opt[['input']]), full.names=FALSE), '')
 
 dfs <- new.env()
 for (input_dir in input_dirs) {
 
     # qpcr data
-    qpcr_file <- list_files(file.path(wd, 'data', input_dir), ext='xls')
+    qpcr_file <- list_files(file.path(wd, opt[['input']], input_dir), ext='xls')
     qpcr_data <- read_excel(qpcr_file, sheet='Results', skip=46, n_max=96)
     colnames(qpcr_data) <- unname(sapply(colnames(qpcr_data), title_to_snake_case))
     qpcr_data[['ct']] <- as.numeric(qpcr_data[['ct']])
 
     # plate setup file
-    plate_setup_file <- list_files(file.path(wd, 'data', input_dir), ext='csv')
+    plate_setup_file <- list_files(file.path(wd, opt[['input']], input_dir), ext='csv')
     plate_setup <- read_excel_or_csv(plate_setup_file)
     plate_setup['mouse_id'] <- input_dir
 
@@ -156,7 +151,7 @@ ggplot(
     theme(axis.text.x = element_text(angle = 45, hjust=1), legend.position='none') +
     scale_y_log10()
 
-savefig(file.path(wd, opt[['output-dir']], paste0('relative_expression.png')),
+savefig(file.path(wd, opt[['output']], paste0('relative_expression.png')),
         dpi=400,
         troubleshooting=troubleshooting)
 

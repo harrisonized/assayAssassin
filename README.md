@@ -1,6 +1,6 @@
-## qPCR Analysis
+## Leige Waffle
 
-Come up with a cool name later
+Named after my favorite Blue Bottle pastry, the purpose of this repository is to handle data wrangling and visualization any plate-based assays, such as qPCR and ELISAs.
 
 ## Copyright
 

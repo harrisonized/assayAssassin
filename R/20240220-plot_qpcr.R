@@ -48,7 +48,7 @@ troubleshooting = opt[['troubleshooting']]
 
 # Start Log
 start_time = Sys.time()
-log <- log_open(paste0("20240215-plot_qpcr-",
+log <- log_open(paste0("20240220-plot_qpcr-",
                        strftime(start_time, format="%Y%m%d_%H%M%S"), '.log'))
 log_print(paste('Script started at:', start_time))
 
@@ -193,7 +193,7 @@ ggplot(
     scale_y_log10()
 
 savefig(file.path(wd, opt[['output']], paste0('relative_expression.png')),
-        dpi=400,
+        width=1600, dpi=400,
         troubleshooting=troubleshooting)
 
 

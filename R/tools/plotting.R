@@ -76,16 +76,18 @@ plot_bar <- function(
 #' 
 #' @export
 plot_heatmap <- function(
-   df,
-   x='col',
-   y='row',
-   fill='val',
-   title=NULL,
-   show_xlabel=TRUE,
-   show_ylabel=TRUE,
-   annotations=FALSE,
-   scientific_notation=FALSE,
-   digits=1
+    df,
+    x='col',
+    y='row',
+    fill='val',
+    xlabel=NULL,
+    ylabel=NULL,
+    title=NULL,
+    show_xlabel=TRUE,
+    show_ylabel=TRUE,
+    annotations=FALSE,
+    scientific_notation=FALSE,
+    digits=1
 ) {
     
     tab <- smelt(rev_df(df))  # reshape
@@ -125,7 +127,7 @@ plot_heatmap <- function(
         geom_tile(color="white", lwd=0.3, linetype=1) +
         coord_fixed(expand=TRUE) +
         scale_y_discrete(limits=rev) +
-        labs(title = title) +
+        labs(x=xlabel, y=ylabel, title = title) +
         theme(plot.title = element_text(size = 10),
                        axis.title.x = xlabel,
                        axis.title.y = ylabel) +

@@ -21,3 +21,11 @@
 items_in_a_not_b <- function(a, b) {
     return((new <- a[which(!a %in% b)]))
 }
+
+
+#' Move List Items to Start
+#' 
+move_list_item_to_start <- function(input_list, item) {
+    output_list = c(item, items_in_a_not_b(input_list, item))
+    return(output_list)
+}

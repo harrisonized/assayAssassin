@@ -34,7 +34,7 @@ option_list = list(
                 metavar='data/input',
                 type="character",help="path/to/input/dir"),
    
-    make_option(c("-o", "--output"), default="figures/20240222-third-pass",
+    make_option(c("-o", "--output"), default="figures/20240223-fourth-pass",
                 metavar="figures", type="character",
                 help="set the output directory for the data"),
 
@@ -48,7 +48,7 @@ troubleshooting = opt[['troubleshooting']]
 
 # Start Log
 start_time = Sys.time()
-log <- log_open(paste0("20240222-plot_qpcr-",
+log <- log_open(paste0("plot_qpcr-",
                        strftime(start_time, format="%Y%m%d_%H%M%S"), '.log'))
 log_print(paste('Script started at:', start_time))
 
@@ -126,28 +126,34 @@ for (input_dir in input_dirs) {
 amp_data_df <- within(amp_data_df,
     sample_id <- paste(sample_name, tissue, gene, well_position, sep=', ')
 )
-amp_data_df <- amp_data_df[(amp_data_df[['gene']]!=''), ]
+amp_data_df <- merge(
+    amp_data_df,
+    result_df[, c('well', 'sample_name', 'cq_conf')],
+    by=c('well', 'sample_name'), all.x=TRUE, all.y=FALSE 
+)
+amp_data_df <- amp_data_df[(amp_data_df[['gene']]!='') & (amp_data_df[['cq_conf']] > 0.5), ]
 
 for (input_dir in input_dirs) {
-    sample_name <- input_dir
+    for (color in c('gene', 'tissue')) {
+        sample_name <- input_dir
 
-    ct_threshold <- result_df[(result_df['sample_name']==sample_name), 'ct_threshold'][[1]]
+        ct_threshold <- result_df[(result_df['sample_name']==sample_name), 'ct_threshold'][[1]]
 
-    ggplot(amp_data_df[
-               (amp_data_df['sample_name']==sample_name) &
-               (amp_data_df['delta_rn'] > 0), ],
-       aes(x=.data[['cycle']], y=.data[['delta_rn']],
-           group=sample_id,
-           colour=gene)) +
-    geom_line(alpha=0.7, size=0.5) +
-    geom_hline(yintercept=ct_threshold, colour='red') +
-    labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for", sample_name)) +
-    scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
+        ggplot(amp_data_df[
+                   (amp_data_df['sample_name']==sample_name) &
+                   (amp_data_df['delta_rn'] > 0), ],
+           aes(x=.data[['cycle']], y=.data[['delta_rn']],
+               group=sample_id,
+               colour=!!sym(color))) +
+        geom_line(alpha=0.7, size=0.5) +
+        geom_hline(yintercept=ct_threshold, colour='red') +
+        labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for", sample_name)) +
+        scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
 
-    savefig(file.path(wd, opt[['output']], input_dir, paste0('delta_rn-', input_dir, '.png')),
-            height=1000, width=1600, dpi=400,
-            troubleshooting=troubleshooting)
-
+        savefig(file.path(wd, opt[['output']], input_dir, paste0('delta_rn-', color, '-', input_dir, '.png')),
+                height=1000, width=1600, dpi=400,
+                troubleshooting=troubleshooting)
+    }
 }
 
 

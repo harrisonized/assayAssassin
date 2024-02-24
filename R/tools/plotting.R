@@ -1,7 +1,7 @@
 import::here(rlang, 'sym')
 import::here(ggplot2,
-    'ggplot', 'aes', 'aes_string', 'theme', 'labs', 
-    'geom_bar', 'geom_tile', 'geom_text', 'coord_fixed',
+    'ggplot', 'aes', 'aes_string', 'theme', 'labs',
+    'geom_bar', 'geom_tile', 'geom_text', 'geom_rect', 'geom_jitter', 'coord_fixed',
     'guide_axis', 'scale_x_discrete', 'scale_y_discrete', 'scale_fill_gradient',
     'element_text', 'element_blank')
 import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
@@ -10,6 +10,9 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
 
 ## Functions
 ## plot_bar
+## plot_heatmap
+## plot_fold_change
+
 
 #' Plot Bar
 #' 
@@ -140,6 +143,43 @@ plot_heatmap <- function(
             )
         }
 
-    return (fig)
+    return(fig)
 }
 
+
+#' Plot Fold Change
+#' 
+#' @export
+plot_fold_change <- function(
+    df,
+    x='tissue',
+    y='fold_change_dnase1l1_actin',
+    color='sample_id',
+    xlabel='Tissue',
+    ylabel='Fold Change',
+    title=NULL
+) {
+
+    fig <- ggplot(
+        df,
+        aes(x=reorder(.data[[x]], .data[[y]], decreasing=TRUE),
+            y=.data[[y]]), na.rm=TRUE) +
+        # see: https://stackoverflow.com/questions/32642856/how-do-i-use-geom-rect-with-discrete-axis-values
+        geom_rect(
+            aes(xmin = stage(
+                    reorder(.data[[x]], .data[[y]], decreasing=TRUE),
+                    after_scale = xmin-0.45),
+                xmax = stage(
+                    reorder(.data[[x]], .data[[y]], decreasing=TRUE),
+                    after_scale = xmax+0.45),
+                ymin = .data[['min_fold_change']],
+                ymax = .data[['max_fold_change']]),
+                fill="#7f7f7f",
+                stat='identity', inherit.aes=TRUE) +
+        geom_jitter(aes(colour=.data[[color]])) +
+        labs(x=xlabel, y=ylabel, title=title) +
+        theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+        scale_y_continuous(trans='log10', labels = function(x) round(x, 5))
+
+    return(fig)
+}

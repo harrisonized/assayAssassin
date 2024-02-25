@@ -7,13 +7,13 @@ library('zeallot')  # %<-%
 library('optparse')
 library('logr')
 import::from(magrittr, '%>%')
-
 import::from(tidyr, 'pivot_wider')
+
 import::from(file.path(wd, 'R', 'tools', 'df_tools.R'),
     'df_to_plate', 'set_index', 'reset_index', 'rev_df', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'tools', 'file_io.R'),
     'savefig', .character_only=TRUE)
-import::here(file.path(wd, 'R', 'tools', 'list_tools.R'),
+import::from(file.path(wd, 'R', 'tools', 'list_tools.R'),
     'items_in_a_not_b', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'tools', 'text_tools.R'),
     'title_to_snake_case', .character_only=TRUE)
@@ -22,6 +22,10 @@ import::from(file.path(wd, 'R', 'tools', 'plotting.R'),
 
 import::from(file.path(wd, 'R', 'functions', 'reader.R'),
     'read_qpcr', .character_only=TRUE)
+import::from(file.path(wd, 'R', 'functions', 'draw_plots.R'),
+    'draw_ct_heatmaps', 'draw_amp_curves', 'draw_fold_changes', .character_only=TRUE)
+import::from(file.path(wd, 'R', 'functions', 'computations.R'),
+    'compute_dct_table', .character_only=TRUE)
 
 
 # ----------------------------------------------------------------------
@@ -29,13 +33,17 @@ import::from(file.path(wd, 'R', 'functions', 'reader.R'),
 
 # args
 option_list = list(
-    make_option(c("-i", "--input"), default='data/input',
+    make_option(c("-i", "--input-dir"), default='data/input',
                 metavar='data/input',
                 type="character",help="path/to/input/dir"),
    
-    make_option(c("-o", "--output"), default="figures/output",
-                metavar="figures", type="character",
+    make_option(c("-o", "--output-dir"), default="data/output",
+                metavar="data/output", type="character",
                 help="set the output directory for the data"),
+
+    make_option(c("-f", "--figures-dir"), default="figures/output",
+                metavar="figures/output", type="character",
+                help="set the output directory for the figures"),
 
     make_option(c("-t", "--troubleshooting"), default=FALSE, action="store_true",
                 metavar="FALSE", type="logical",
@@ -57,143 +65,57 @@ log_print(paste('Script started at:', start_time))
 
 log_print(paste(Sys.time(), 'Reading data...'))
 
-c(result_df, amp_data_df) %<-% read_qpcr(file.path(wd, opt[['input']]))
-input_dirs <- items_in_a_not_b(list.dirs(file.path(wd, opt[['input']]), full.names=FALSE), '')
+c(results, amp_data, plate_ids) %<-% read_qpcr(
+    file.path(wd, opt[['input-dir']])
+)
 
-# ----------------------------------------------------------------------
-# QC
-
-for (input_dir in input_dirs) {
-
-    result_subset <- result_df[(result_df['sample_id']==input_dir), ]
-
-    # plot heatmap
-    plate <- df_to_plate(result_subset, value='ct')
-    fig <- plot_heatmap(plate,
-        show_xlabel=FALSE,
-        show_ylabel=FALSE,
-        title=paste('CT for', input_dir), annotations=TRUE, digits=2)
-
-    savefig(file.path(wd, opt[['output']], input_dir, paste0('heatmap-', input_dir, '.png')),
-            dpi=400,
-            troubleshooting=troubleshooting)
-}
-
+# qc
+draw_ct_heatmaps(
+    results,
+    plate_ids,
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
 
 # ----------------------------------------------------------------------
 # Plot Amplification Curves
 
-amp_data_df <- within(amp_data_df,
+amp_data <- within(amp_data,
     row_id <- paste(sample_id, tissue, gene, well_position, sep=', ')
 )
-amp_data_df <- merge(
-    amp_data_df,
-    result_df[, c('well', 'sample_id', 'cq_conf')],
+amp_data <- merge(
+    amp_data,
+    results[, c('well', 'sample_id', 'cq_conf')],
     by=c('well', 'sample_id'), all.x=TRUE, all.y=FALSE 
 )
-amp_data_df <- amp_data_df[(amp_data_df[['gene']]!='') & (amp_data_df[['cq_conf']] > 0.5), ]
 
-for (input_dir in input_dirs) {
-    for (color in c('gene', 'tissue')) {
-        sample_id <- input_dir
-
-        ct_threshold <- result_df[(result_df['sample_id']==sample_id), 'ct_threshold'][[1]]
-
-        ggplot(amp_data_df[
-                   (amp_data_df['sample_id']==sample_id) &
-                   (amp_data_df['delta_rn'] > 0), ],
-           aes(x=.data[['cycle']], y=.data[['delta_rn']],
-               group=row_id,
-               colour=!!sym(color))) +
-        geom_line(alpha=0.7, size=0.5) +
-        geom_hline(yintercept=ct_threshold, colour='red') +
-        labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for", sample_id)) +
-        scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
-
-        savefig(file.path(wd, opt[['output']], input_dir, paste0('delta_rn-', color, '-', input_dir, '.png')),
-                height=1000, width=1600, dpi=400,
-                troubleshooting=troubleshooting)
-    }
-}
-
-
-# ----------------------------------------------------------------------
-# Compute dCT Table
-
-log_print(paste(Sys.time(), 'Computing ddct...'))
-
-index_cols <- c('sample_id', 'tissue', 'gene')
-ct_long <- result_df %>%
-    group_by(!!!syms(index_cols)) %>%
-    summarize(mean_ct=mean(ct, na.rm=TRUE),
-              stdev_ct=sd(ct, na.rm=TRUE),
-              .groups = 'drop')
-ct_long <- ct_long[(ct_long[['tissue']]!=''),]
-
-ct_wide <- pivot_wider(
-    ct_long,
-    names_from=c(gene),
-    values_from=c(mean_ct, stdev_ct)
+draw_amp_curves(
+    amp_data,
+    plate_ids,
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
 )
-
-# TODO: derive this from the colnames
-sample_genes <- c('dnase1l1')
-control_genes <- c('actin', 'hprt')
-
-for (sample_gene in sample_genes) {
-    for (control_gene in control_genes) {
-        dct_col <- paste('dct', sample_gene, control_gene, sep='_')
-        fold_change_col <- paste('fold_change', sample_gene, control_gene, sep='_')
-        sample_gene_col <- paste('mean_ct', sample_gene, sep='_')
-        control_gene_col <- paste('mean_ct', control_gene, sep='_')
-
-        ct_wide[[dct_col]] = ct_wide[[sample_gene_col]] - ct_wide[[control_gene_col]]
-        ct_wide[[fold_change_col]] = 2^(-ct_wide[[dct_col]])
-    }
-}
 
 # ----------------------------------------------------------------------
 # Plot Fold Change
 
 log_print(paste(Sys.time(), 'Plotting fold change...'))
 
-control_genes <- c('Actin', 'Hprt')
+ct_wide <- compute_dct_table(results)
 ct_wide <- ct_wide[(ct_wide['sample_id'] != '12176'), ]
 
-for (control_gene_name in control_genes) {
+# manual filters
+ct_wide <- ct_wide[(ct_wide['stdev_ct_dnase1l1'] <= 2), ]
+ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]
 
-    fold_change_col <- paste0('fold_change_dnase1l1_', tolower(control_gene_name))
-
-    ct_wide <- ct_wide[order(ct_wide[[fold_change_col]], decreasing = TRUE),]
-    ct_wide <- reset_index(ct_wide, drop=TRUE)
-
-    # manual filters
-    ct_wide <- ct_wide[(ct_wide['stdev_ct_dnase1l1'] <= 2), ]
-    ct_wide <- ct_wide[(ct_wide[fold_change_col] <= 1), ]
-    ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]
-
-    # barsize
-    barsize <- ct_wide %>%
-        group_by(tissue) %>%
-        summarize(min_fold_change=min(!!sym(fold_change_col), na.rm=TRUE),
-                  max_fold_change=max(!!sym(fold_change_col), na.rm=TRUE))
-    tmp <- merge(ct_wide, barsize,
-        by='tissue', all.x=TRUE, all.y=FALSE 
-    )
-
-    tmp <- tmp[!is.na(tmp['sample_id']), ]
-
-    fig <- plot_fold_change(
-        tmp,
-        x='tissue',
-        y=fold_change_col,
-        title=paste("Relative Expression of Dnase1l1 vs.", control_gene_name)
-    )
-
-    savefig(file.path(wd, opt[['output']], paste0(fold_change_col, '.png')),
-            width=1600, dpi=400,
-            troubleshooting=troubleshooting)
-}
+draw_fold_changes(
+    ct_wide,
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
 
 
 end_time = Sys.time()

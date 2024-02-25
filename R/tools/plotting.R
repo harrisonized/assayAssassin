@@ -1,8 +1,9 @@
 import::here(rlang, 'sym')
 import::here(ggplot2,
     'ggplot', 'aes', 'aes_string', 'theme', 'labs',
-    'geom_bar', 'geom_tile', 'geom_text', 'geom_rect', 'geom_jitter', 'coord_fixed',
-    'guide_axis', 'scale_x_discrete', 'scale_y_discrete', 'scale_fill_gradient',
+    'geom_bar', 'geom_line', 'geom_hline', 'geom_tile', 'geom_rect', 'geom_jitter', 
+    'geom_text', 'coord_fixed', 'guide_axis',
+    'scale_x_discrete', 'scale_y_continuous', 'scale_y_discrete', 'scale_fill_gradient',
     'element_text', 'element_blank')
 import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
     'smelt', .character_only=TRUE)
@@ -11,6 +12,7 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
 ## Functions
 ## plot_bar
 ## plot_heatmap
+## plot_amp_curves
 ## plot_fold_change
 
 
@@ -139,7 +141,8 @@ plot_heatmap <- function(
             geom_text(
                 aes_string(label=label),
                 color = 'black',
-                size = 2
+                size = 2,
+                na.rm=TRUE
             )
         }
 
@@ -147,9 +150,30 @@ plot_heatmap <- function(
 }
 
 
+#' Plot Amp Curves
+#' 
+plot_amp_curves <- function(
+    amp_data,
+    ct_threshold=NA,
+    color='row_id',
+    plate_id='1'
+) {
+    
+    fig <- ggplot(amp_data[(amp_data['delta_rn'] > 0), ],
+        aes(x=.data[['cycle']], y=.data[['delta_rn']],
+            group=row_id,
+            colour=!!sym(color))) +
+        geom_line(alpha=0.7, size=0.5) +
+        geom_hline(yintercept=ct_threshold, colour='red') +
+        labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for Plate", plate_id)) +
+        scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
+
+    return(fig)
+}
+
+
 #' Plot Fold Change
 #' 
-#' @export
 plot_fold_change <- function(
     df,
     x='tissue',

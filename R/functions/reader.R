@@ -13,48 +13,57 @@ import::here(file.path(wd, 'R', 'tools', 'list_tools.R'),
 #' @description
 #' See the README for the input directory structure. (Note: TODO)
 #'
-read_qpcr <- function(input) {
+read_qpcr <- function(input_path) {
 
-    input_dirs <- items_in_a_not_b(list.dirs(input, full.names=FALSE), '')
+    all_results <- new.env()
+    all_amp_data <- new.env()
 
-    result_dfs <- new.env()
-    amp_data_dfs <- new.env()
+    plate_ids <- items_in_a_not_b(list.dirs(input_path, full.names=FALSE), '')
+    for (plate_id in plate_ids) {
 
-    for (input_dir in input_dirs) {
-
-        sample_id <- input_dir  # may not be true in future experiments
-        qpcr_file <- list_files(file.path(wd, opt[['input']], input_dir), ext='xls')[[1]]
+        # TODO: try/catch for broken files
+        qpcr_file <- list_files(file.path(input_path, plate_id), ext='xls')[[1]]
 
 
         # plate setup file
-        plate_setup_file <- list_files(file.path(wd, opt[['input']], input_dir), ext='csv')
-        plate_setup <- read_excel_or_csv(plate_setup_file)  # change to read_csv
-        plate_setup['sample_id'] <- sample_id
+        plate_setup <- read.csv(
+            file.path(input_path, plate_id, 'plate-setup.csv'),
+            header=TRUE, check.names=FALSE
+        )
+        plate_setup[['sample_id']] <- as.character(plate_setup[['sample_id']])
+        plate_setup['plate_id'] <- plate_id
         plate_setup <- plate_setup[, 
-            move_list_item_to_start(colnames(plate_setup), 'sample_id')
+            move_list_item_to_start(colnames(plate_setup), 'plate_id')
         ]
+        
 
-        # result
-        result <- read_excel(qpcr_file, sheet='Results', skip=46, n_max=96)
-        colnames(result) <- unname(sapply(colnames(result), title_to_snake_case))
-        result[['ct']] <- unname(sapply(result[['ct']], function(x) gsub("Undetermined", NA, x)))
-        result[['ct']] <- as.numeric(result[['ct']])
-        result <- merge(plate_setup, result[c('well', 'ct', 'ct_threshold', 'amp_score', 'cq_conf', 'tm1')],
+        # results
+        results <- read_excel(qpcr_file, sheet='Results', skip=46, n_max=96)
+        colnames(results) <- unname(sapply(colnames(results), title_to_snake_case))
+        results[['ct']] <- unname(sapply(results[['ct']], function(x) gsub("Undetermined", NA, x)))
+        results[['ct']] <- as.numeric(results[['ct']])
+        results <- merge(
+            plate_setup,
+            results[c('well', 'ct', 'ct_threshold', 'amp_score', 'cq_conf', 'tm1')],
             by='well', all.x=TRUE, all.y=FALSE
         )
-        result_dfs[[sample_id]] <- result
+        all_results[[plate_id]] <- results
+
 
         # amp_data
         amp_data <- read_excel(qpcr_file, sheet='Amplification Data', skip=46)
         colnames(amp_data) <- unname(sapply(colnames(amp_data), title_to_snake_case))
-        amp_data <- merge(plate_setup, amp_data[c('well', 'cycle', 'rn', 'delta_rn')],
+        amp_data <- merge(
+            plate_setup,
+            amp_data[c('well', 'cycle', 'rn', 'delta_rn')],
             by='well', all.x=TRUE, all.y=FALSE
         )
-        amp_data_dfs[[sample_id]] <- amp_data
-
+        all_amp_data[[plate_id]] <- amp_data
+        
     }
-    result_df <- do.call(rbind, as.list(result_dfs))
-    amp_data_df <- do.call(rbind, as.list(amp_data_dfs))
 
-    return( list(result_df, amp_data_df) )
+    results <- do.call(rbind, as.list(all_results))
+    amp_data <- do.call(rbind, as.list(all_amp_data))
+
+    return( list(results, amp_data, plate_ids) )
 }

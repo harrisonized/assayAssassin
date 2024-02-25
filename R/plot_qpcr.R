@@ -13,7 +13,7 @@ import::from(file.path(wd, 'R', 'functions', 'reader.R'),
 import::from(file.path(wd, 'R', 'functions', 'draw_plots.R'),
     'draw_ct_heatmaps', 'draw_amp_curves', 'draw_fold_changes', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'functions', 'computations.R'),
-    'compute_dct_table', .character_only=TRUE)
+    'ct_thresholds_from_results', 'dct_table_from_results', .character_only=TRUE)
 
 
 # ----------------------------------------------------------------------
@@ -33,6 +33,22 @@ option_list = list(
                 metavar="figures/output", type="character",
                 help="set the output directory for the figures"),
 
+    make_option(c("-c", "--min-cq-conf"), default=0.75,
+                metavar="0.75", type="numeric",
+                help="set the cq_conf cutoff level"),
+
+    make_option(c("-d", "--drop-plates"), default="12176",
+                metavar="12176", type="character",
+                help="semicolon(;)-separated list of unwanted plate_ids"),
+
+    make_option(c("-s", "--sample-genes"), default="Dnase1l1",
+                metavar="Dnase1l1", type="character",
+                help="semicolon(;)-separated list of sample genes"),
+
+    make_option(c("-g", "--control-genes"), default="Actin;Hprt",
+                metavar="Actin;Hprt", type="character",
+                help="semicolon(;)-separated list of control genes"),
+
     make_option(c("-t", "--troubleshooting"), default=FALSE, action="store_true",
                 metavar="FALSE", type="logical",
                 help="enable if troubleshooting to prevent overwriting your files")
@@ -40,6 +56,11 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 troubleshooting = opt[['troubleshooting']]
+
+drop_plates <- strsplit(opt[['drop-plates']], ';')[[1]]
+sample_genes <- strsplit(opt[['sample-genes']], ';')[[1]]
+control_genes <- strsplit(opt[['control-genes']], ';')[[1]]
+
 
 # Start Log
 start_time = Sys.time()
@@ -53,14 +74,17 @@ log_print(paste('Script started at:', start_time))
 
 log_print(paste(Sys.time(), 'Reading data...'))
 
-c(results, amp_data, plate_ids) %<-% read_qpcr(
+c(results, amp_data, plate_ids, metadata_cols) %<-% read_qpcr(
     file.path(wd, opt[['input-dir']])
 )
+ct_thresholds <- ct_thresholds_from_results(results)
 
-# qc
+
+# ----------------------------------------------------------------------
+# Plot Ct Heatmaps
+
 draw_ct_heatmaps(
-    results,
-    plate_ids,
+    results[(results[['cq_conf']] > opt[['min-cq-conf']]), ],
     dirpath=file.path(wd, opt[['figures-dir']]),
     troubleshooting=troubleshooting,
     showfig=troubleshooting
@@ -74,32 +98,48 @@ amp_data <- within(amp_data,
 )
 amp_data <- merge(
     amp_data,
-    results[, c('well', 'sample_id', 'cq_conf')],
-    by=c('well', 'sample_id'), all.x=TRUE, all.y=FALSE 
+    results[, c('sample_id', 'well', 'cq_conf')],
+    by=c('sample_id', 'well'), all.x=TRUE, all.y=FALSE 
 )
 
 draw_amp_curves(
-    amp_data,
-    plate_ids,
+    amp_data[(amp_data[['cq_conf']] > opt[['min-cq-conf']]), ],
     dirpath=file.path(wd, opt[['figures-dir']]),
+    ct_thresholds=ct_thresholds,
+    metadata_cols=c(metadata_cols, 'cq_conf'),
     troubleshooting=troubleshooting,
     showfig=troubleshooting
 )
+
 
 # ----------------------------------------------------------------------
 # Plot Fold Change
 
 log_print(paste(Sys.time(), 'Plotting fold change...'))
 
-ct_wide <- compute_dct_table(results)
-ct_wide <- ct_wide[(ct_wide['sample_id'] != '12176'), ]
+dct_table <- dct_table_from_results(
+    results[(results[['ignore']]==0),],
+    index_cols=c('plate_id', 'sample_id', 'tissue', 'gene'),
+    sample_genes=sample_genes,
+    control_genes=control_genes
+)
 
-# manual filters
-ct_wide <- ct_wide[(ct_wide['stdev_ct_dnase1l1'] <= 2), ]
-ct_wide <- ct_wide[(ct_wide['tissue'] != 'pc'), ]
+# manually drop plates
+dct_table <- dct_table[
+    !(dct_table[['plate_id']] %in% drop_plates) &
+    (dct_table[['plate_id']] != drop_plates),
+]
+
+# filters
+for (sample_gene in sample_genes) {
+    dct_table <- dct_table[(dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2), ]
+}
+dct_table <- dct_table[!is.na(dct_table['sample_id']), ]
 
 draw_fold_changes(
-    ct_wide,
+    dct_table,
+    sample_genes=sample_genes,
+    control_genes=control_genes,
     dirpath=file.path(wd, opt[['figures-dir']]),
     troubleshooting=troubleshooting,
     showfig=troubleshooting

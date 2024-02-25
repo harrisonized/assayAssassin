@@ -15,7 +15,11 @@ import::here(file.path(wd, 'R', 'tools', 'list_tools.R'),
 #' @description
 #' TODO: Add input directory structure to README.
 #'
-read_qpcr <- function(input_path) {
+read_qpcr <- function(
+    input_path,
+    results_cols=c('well', 'ct', 'ct_threshold', 'amp_score', 'cq_conf', 'tm1'),
+    amp_data_cols=c('well', 'cycle', 'rn', 'delta_rn')
+) {
 
     all_results <- new.env()
     all_amp_data <- new.env()
@@ -33,10 +37,14 @@ read_qpcr <- function(input_path) {
             header=TRUE, check.names=FALSE
         )
         plate_setup[['sample_id']] <- as.character(plate_setup[['sample_id']])
+        plate_setup <- plate_setup[(!is.na(plate_setup[['sample_id']])), ]
         plate_setup['plate_id'] <- plate_id
         plate_setup <- plate_setup[, 
             move_list_item_to_start(colnames(plate_setup), 'plate_id')
         ]
+        if (!('ignore' %in% colnames(plate_setup))) {
+            plate_setup[['ignore']] <- 0
+        }
         
 
         # results
@@ -46,7 +54,7 @@ read_qpcr <- function(input_path) {
         results[['ct']] <- as.numeric(results[['ct']])
         results <- merge(
             plate_setup,
-            results[c('well', 'ct', 'ct_threshold', 'amp_score', 'cq_conf', 'tm1')],
+            results[, results_cols],
             by='well', all.x=TRUE, all.y=FALSE
         )
         all_results[[plate_id]] <- results
@@ -57,7 +65,7 @@ read_qpcr <- function(input_path) {
         colnames(amp_data) <- unname(sapply(colnames(amp_data), title_to_snake_case))
         amp_data <- merge(
             plate_setup,
-            amp_data[c('well', 'cycle', 'rn', 'delta_rn')],
+            amp_data[, amp_data_cols],
             by='well', all.x=TRUE, all.y=FALSE
         )
         all_amp_data[[plate_id]] <- amp_data
@@ -67,5 +75,9 @@ read_qpcr <- function(input_path) {
     results <- do.call(rbind, as.list(all_results))
     amp_data <- do.call(rbind, as.list(all_amp_data))
 
-    return( list(results, amp_data, plate_ids) )
+    metadata_cols <- items_in_a_not_b(
+        colnames(plate_setup),
+        c('plate_id', 'well', 'well_position', 'sample_id', 'ignore')
+    )
+    return( list(results, amp_data, plate_ids, metadata_cols) )
 }

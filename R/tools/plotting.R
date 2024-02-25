@@ -116,32 +116,35 @@ plot_heatmap <- function(
                 tab['val'], 
                 function(x) formatC(x, format='e', digits=2)
             )
+            tab['label']
         } else {
             tab['label'] = lapply(
                 tab['val'], 
                 function(x) round(x, digits)
             )
         }
+        tab[['label']] <- as.character(tab[['label']])
     } else {
         label = NULL
     }
 
     # plot
+    # TODO: Fix bug that drops entire columns of NA values
     fig <- ggplot(tab, aes_string(x=x, y=y, fill=fill)) +
         geom_tile(color="white", lwd=0.3, linetype=1) +
-        coord_fixed(expand=TRUE) +
         scale_y_discrete(limits=rev) +
-        labs(x=xlabel, y=ylabel, title = title) +
+        coord_fixed(expand=TRUE) +
+        labs(title = title) +
         theme(plot.title = element_text(size = 10),
-                       axis.title.x = xlabel,
-                       axis.title.y = ylabel) +
+              axis.title.x = xlabel,
+              axis.title.y = ylabel) +
         scale_fill_gradient(low="#FFF8F8", high="#A50026") +
         if (annotations) {
             geom_text(
                 aes_string(label=label),
                 color = 'black',
                 size = 2,
-                na.rm=TRUE
+                na.rm=FALSE
             )
         }
 

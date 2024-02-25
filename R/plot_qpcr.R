@@ -86,8 +86,9 @@ ct_thresholds <- ct_thresholds_from_results(results)
 log_print(paste(Sys.time(), 'Drawing CT heatmaps...'))
 
 draw_ct_heatmaps(
-    results[(results[['cq_conf']] > opt[['min-cq-conf']]), ],
+    results,
     dirpath=file.path(wd, opt[['figures-dir']]),
+    min_cq_conf=opt[['min-cq-conf']],
     troubleshooting=troubleshooting,
     showfig=troubleshooting
 )

@@ -18,13 +18,16 @@ import::here(file.path(wd, 'R', 'tools', 'plotting.R'),
 draw_ct_heatmaps <- function(
     results,
     dirpath,
+    min_cq_conf=0.75,
     troubleshooting=FALSE,
     showfig=FALSE
 ) {
     plate_ids <- sort(unique(results[['plate_id']]))
     for (plate_id in plate_ids) {
+        tmp <- results
+        tmp[(tmp[['cq_conf']] <= min_cq_conf), 'ct'] <- NA
+        plate <- df_to_plate(tmp[(tmp['plate_id']==plate_id), ], value='ct', num_wells=96)
 
-        plate <- df_to_plate(results[(results['plate_id']==plate_id), ], value='ct')
         fig <- plot_heatmap(plate,
             show_xlabel=FALSE,
             show_ylabel=FALSE,

@@ -123,15 +123,13 @@ plot_heatmap <- function(
                 function(x) round(x, digits)
             )
         }
-        tab[['label']] <- as.character(tab[['label']])
+        # tab[['label']] <- as.character(tab[['label']])
     } else {
         label = NULL
     }
 
-    # plot
-    # TODO: Fix bug that drops entire columns of NA values
-    fig <- ggplot(tab, aes_string(x=x, y=y, fill=fill)) +
-        geom_tile(color="white", lwd=0.3, linetype=1) +
+    fig <- ggplot(tab, aes(x=.data[[x]], y=.data[[y]], fill=.data[[fill]])) +
+        geom_tile(color="white", lwd=0.3, linetype=1, na.rm=FALSE) +
         scale_y_discrete(limits=rev) +
         coord_fixed(expand=TRUE) +
         labs(title = title) +

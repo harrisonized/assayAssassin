@@ -7,18 +7,6 @@ library('zeallot')  # %<-%
 library('optparse')
 library('logr')
 import::from(magrittr, '%>%')
-import::from(tidyr, 'pivot_wider')
-
-import::from(file.path(wd, 'R', 'tools', 'df_tools.R'),
-    'df_to_plate', 'set_index', 'reset_index', 'rev_df', .character_only=TRUE)
-import::from(file.path(wd, 'R', 'tools', 'file_io.R'),
-    'savefig', .character_only=TRUE)
-import::from(file.path(wd, 'R', 'tools', 'list_tools.R'),
-    'items_in_a_not_b', .character_only=TRUE)
-import::from(file.path(wd, 'R', 'tools', 'text_tools.R'),
-    'title_to_snake_case', .character_only=TRUE)
-import::from(file.path(wd, 'R', 'tools', 'plotting.R'),
-    'plot_bar', 'plot_heatmap', 'plot_fold_change', .character_only=TRUE)
 
 import::from(file.path(wd, 'R', 'functions', 'reader.R'),
     'read_qpcr', .character_only=TRUE)

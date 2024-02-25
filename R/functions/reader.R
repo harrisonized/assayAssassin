@@ -1,6 +1,8 @@
 import::here(readxl, 'read_excel')
 import::here(file.path(wd, 'R', 'tools', 'file_io.R'),
     'list_files', 'read_excel_or_csv', .character_only=TRUE)
+import::here(file.path(wd, 'R', 'tools', 'text_tools.R'),
+    'title_to_snake_case', .character_only=TRUE)
 import::here(file.path(wd, 'R', 'tools', 'list_tools.R'),
     'items_in_a_not_b', 'move_list_item_to_start', .character_only=TRUE)
 
@@ -11,7 +13,7 @@ import::here(file.path(wd, 'R', 'tools', 'list_tools.R'),
 #' Read QPCR
 #' 
 #' @description
-#' See the README for the input directory structure. (Note: TODO)
+#' TODO: Add input directory structure to README.
 #'
 read_qpcr <- function(input_path) {
 

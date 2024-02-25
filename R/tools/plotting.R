@@ -6,8 +6,7 @@ import::here(ggplot2,
     'scale_x_discrete', 'scale_y_continuous', 'scale_y_discrete', 'scale_fill_gradient',
     'element_text', 'element_blank')
 import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
-    'smelt', .character_only=TRUE)
-
+    'rev_df', 'smelt', .character_only=TRUE)
 
 ## Functions
 ## plot_bar

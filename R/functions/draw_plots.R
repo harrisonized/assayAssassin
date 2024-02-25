@@ -1,7 +1,7 @@
 import::here(rlang, 'sym')
 import::here(dplyr, 'group_by', 'summarize')
 import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
-    'df_to_plate', .character_only=TRUE)
+    'df_to_plate', 'reset_index', .character_only=TRUE)
 import::here(file.path(wd, 'R', 'tools', 'file_io.R'),
     'savefig', .character_only=TRUE)
 import::here(file.path(wd, 'R', 'tools', 'plotting.R'),

@@ -126,9 +126,22 @@ dct_table <- dct_table_from_results(
     sample_genes=sample_genes,
     control_genes=control_genes
 )
+
+# save dct_table
+if (!troubleshooting) {
+    output_dir <- file.path(wd, opt[['output-dir']])
+    if (!dir.exists(output_dir)) {
+        dir.create(output_dir, recursive=TRUE)
+    }
+    filepath = file.path(output_dir, 'dct_table.csv')
+    write.table(dct_table, file = filepath, row.names = FALSE, sep = ',' )
+}
+
 # filter low quality
 for (sample_gene in sample_genes) {
-    dct_table <- dct_table[(dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2), ]
+    dct_table <- dct_table[
+        (dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2),
+    ]  # sLN
 }
 
 # exclude plates

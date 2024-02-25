@@ -144,7 +144,7 @@ plot_heatmap <- function(
                 aes_string(label=label),
                 color = 'black',
                 size = 2,
-                na.rm=FALSE
+                na.rm=TRUE
             )
         }
 
@@ -165,7 +165,7 @@ plot_amp_curves <- function(
         aes(x=.data[['cycle']], y=.data[['delta_rn']],
             group=row_id,
             colour=!!sym(color))) +
-        geom_line(alpha=0.7, size=0.5) +
+        geom_line(alpha=0.7, size=0.5, na.rm=TRUE) +
         geom_hline(yintercept=ct_threshold, colour='red') +
         labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for Plate", plate_id)) +
         scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
@@ -193,10 +193,10 @@ plot_fold_change <- function(
         # see: https://stackoverflow.com/questions/32642856/how-do-i-use-geom-rect-with-discrete-axis-values
         geom_rect(
             aes(xmin = stage(
-                    reorder(.data[[x]], .data[[y]], decreasing=TRUE),
+                    .data[[x]],
                     after_scale = xmin-0.45),
                 xmax = stage(
-                    reorder(.data[[x]], .data[[y]], decreasing=TRUE),
+                    .data[[x]],
                     after_scale = xmax+0.45),
                 ymin = .data[['min_fold_change']],
                 ymax = .data[['max_fold_change']]),

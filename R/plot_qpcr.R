@@ -81,7 +81,9 @@ ct_thresholds <- ct_thresholds_from_results(results)
 
 
 # ----------------------------------------------------------------------
-# Plot Ct Heatmaps
+# Draw Ct Heatmaps
+
+log_print(paste(Sys.time(), 'Drawing CT heatmaps...'))
 
 draw_ct_heatmaps(
     results[(results[['cq_conf']] > opt[['min-cq-conf']]), ],
@@ -91,7 +93,9 @@ draw_ct_heatmaps(
 )
 
 # ----------------------------------------------------------------------
-# Plot Amplification Curves
+# Draw Amplification Curves
+
+log_print(paste(Sys.time(), 'Drawing amp curves...'))
 
 amp_data <- within(amp_data,
     row_id <- paste(sample_id, tissue, gene, well_position, sep=', ')
@@ -111,9 +115,8 @@ draw_amp_curves(
     showfig=troubleshooting
 )
 
-
 # ----------------------------------------------------------------------
-# Plot Fold Change
+# Plot Fold Changes
 
 log_print(paste(Sys.time(), 'Plotting fold change...'))
 
@@ -123,17 +126,16 @@ dct_table <- dct_table_from_results(
     sample_genes=sample_genes,
     control_genes=control_genes
 )
+# filter low quality
+for (sample_gene in sample_genes) {
+    dct_table <- dct_table[(dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2), ]
+}
 
-# manually drop plates
+# exclude plates
 dct_table <- dct_table[
     !(dct_table[['plate_id']] %in% drop_plates) &
     (dct_table[['plate_id']] != drop_plates),
 ]
-
-# filters
-for (sample_gene in sample_genes) {
-    dct_table <- dct_table[(dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2), ]
-}
 dct_table <- dct_table[!is.na(dct_table['sample_id']), ]
 
 draw_fold_changes(

@@ -1,6 +1,6 @@
 ## Basic qPCR analysis
 
-wd = dirname(this.path::here())  # wd = '~/github/R/leige-waffle'
+wd = dirname(this.path::here())  # wd = '~/github/R/leigeWaffle'
 suppressPackageStartupMessages(library('dplyr'))
 suppressPackageStartupMessages(library('ggplot2'))
 library('zeallot')  # %<-%
@@ -11,7 +11,8 @@ import::from(magrittr, '%>%')
 import::from(file.path(wd, 'R', 'functions', 'reader.R'),
     'read_qpcr', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'functions', 'draw_plots.R'),
-    'draw_ct_heatmaps', 'draw_amp_curves', 'draw_fold_changes', .character_only=TRUE)
+    'draw_heatmaps', 'draw_amp_curves', 'draw_fold_changes', 'draw_cq_conf_dots',
+    .character_only=TRUE)
 import::from(file.path(wd, 'R', 'functions', 'computations.R'),
     'ct_thresholds_from_results', 'dct_table_from_results', .character_only=TRUE)
 
@@ -81,20 +82,27 @@ ct_thresholds <- ct_thresholds_from_results(results)
 
 
 # ----------------------------------------------------------------------
-# Draw Ct Heatmaps
+# QC for Individual Plates
 
 log_print(paste(Sys.time(), 'Drawing CT heatmaps...'))
 
-draw_ct_heatmaps(
+draw_heatmaps(
     results,
     dirpath=file.path(wd, opt[['figures-dir']]),
+    value='ct',
     min_cq_conf=opt[['min-cq-conf']],
     troubleshooting=troubleshooting,
     showfig=troubleshooting
 )
 
-# ----------------------------------------------------------------------
-# Draw Amplification Curves
+draw_heatmaps(
+    results,
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    value='cq_conf',
+    min_cq_conf=1,
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
 
 log_print(paste(Sys.time(), 'Drawing amp curves...'))
 
@@ -115,6 +123,22 @@ draw_amp_curves(
     troubleshooting=troubleshooting,
     showfig=troubleshooting
 )
+
+
+# ----------------------------------------------------------------------
+# QC for the Entire Run
+
+
+draw_cq_conf_dots(
+    results,
+    genes=c('Dnase1l1', 'Actin', 'Hprt'),
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
+
+# to do: add scatterplot of ct vs. cq_conf
+
 
 # ----------------------------------------------------------------------
 # Plot Fold Changes
@@ -142,7 +166,7 @@ if (!troubleshooting) {
 for (sample_gene in sample_genes) {
     dct_table <- dct_table[
         (dct_table[paste0('stdev_ct_', tolower(sample_gene))] <= 2),
-    ]  # sLN
+    ]
 }
 
 # exclude plates

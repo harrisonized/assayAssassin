@@ -12,7 +12,7 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
 ## plot_bar
 ## plot_heatmap
 ## plot_amp_curves
-## plot_fold_change
+## plot_dots_and_bars
 
 
 #' Plot Bar
@@ -172,17 +172,30 @@ plot_amp_curves <- function(
 }
 
 
-#' Plot Fold Change
+#' Plot Dots and Bars
+#'
+#' @description
+#' Like a violin plot, but with a bar that spans the dots instead
 #' 
-plot_fold_change <- function(
+plot_dots_and_bars <- function(
     df,
     x='tissue',
     y='fold_change_dnase1l1_actin',
     color='sample_id',
+    ymin='min_fold_change',
+    ymax='max_fold_change',
     xlabel='Tissue',
     ylabel='Fold Change',
-    title=NULL
+    title=NULL,
+    log_y=TRUE
 ) {
+
+    if (log_y) {
+        scale_y <- scale_y_continuous(trans='log10', labels = function(x) round(x, 5))
+    } else {
+        scale_y <- list()
+    }
+
 
     fig <- ggplot(
         df,
@@ -196,14 +209,14 @@ plot_fold_change <- function(
                 xmax = stage(
                     .data[[x]],
                     after_scale = xmax+0.45),
-                ymin = .data[['min_fold_change']],
-                ymax = .data[['max_fold_change']]),
+                ymin = .data[[ymin]],
+                ymax = .data[[ymax]]),
                 fill="#7f7f7f",
                 stat='identity', inherit.aes=TRUE) +
         geom_jitter(aes(colour=.data[[color]])) +
         labs(x=xlabel, y=ylabel, title=title) +
         theme(axis.text.x = element_text(angle = 45, hjust=1)) +
-        scale_y_continuous(trans='log10', labels = function(x) round(x, 5))
+        scale_y
 
     return(fig)
 }

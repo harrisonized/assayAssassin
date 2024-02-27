@@ -5,19 +5,21 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
 import::here(file.path(wd, 'R', 'tools', 'file_io.R'),
     'savefig', .character_only=TRUE)
 import::here(file.path(wd, 'R', 'tools', 'plotting.R'),
-    'plot_heatmap', 'plot_amp_curves', 'plot_fold_change', .character_only=TRUE)
+    'plot_heatmap', 'plot_amp_curves', 'plot_dots_and_bars', .character_only=TRUE)
 
 ## Functions
-## draw_ct_heatmaps
+## draw_heatmaps
 ## draw_amp_curves
+## draw_cq_conf_dots
 ## draw_fold_changes
 
 
 #' Draw CT Heatmaps
 #' 
-draw_ct_heatmaps <- function(
+draw_heatmaps <- function(
     results,
     dirpath,
+    value='ct',
     min_cq_conf=0.75,
     troubleshooting=FALSE,
     showfig=FALSE
@@ -26,15 +28,19 @@ draw_ct_heatmaps <- function(
     for (plate_id in plate_ids) {
         tmp <- results
         tmp[(tmp[['cq_conf']] <= min_cq_conf), 'ct'] <- NA
-        plate <- df_to_plate(tmp[(tmp['plate_id']==plate_id), ], value='ct', num_wells=96)
+        plate <- df_to_plate(
+            tmp[(tmp['plate_id']==plate_id), ],
+            value=value,
+            num_wells=96
+        )
 
         fig <- plot_heatmap(plate,
             show_xlabel=FALSE,
             show_ylabel=FALSE,
-            title=paste('CT for Plate', plate_id),
+            title=paste(value, 'for plate', plate_id),
             annotations=TRUE, digits=2)
         if (showfig) { print(fig) }
-        savefig(file.path(dirpath, plate_id, paste0('heatmap-ct-', plate_id, '.png')),
+        savefig(file.path(dirpath, plate_id, paste0('heatmap-', value, '-', plate_id, '.png')),
                 dpi=400,
                 troubleshooting=troubleshooting)
     }
@@ -74,6 +80,48 @@ draw_amp_curves <- function(
 }
 
 
+#' Draw Cq Conf Dots
+#' 
+draw_cq_conf_dots <- function(
+    results,
+    genes=c('Dnase1l1', 'Actin', 'Hprt'),
+    dirpath,
+    troubleshooting=FALSE,
+    showfig=FALSE
+) {
+
+    for (gene in genes) {
+
+        tmp <- results[(results['gene']==tolower(gene)), ]
+
+        # compute barsize
+        barsize <- tmp %>%
+            group_by(tissue) %>%
+            summarize(min_bar=min(!!sym('cq_conf'), na.rm=TRUE),
+                      mean_bar=mean(!!sym('cq_conf'), na.rm=TRUE),
+                      max_bar=max(!!sym('cq_conf'), na.rm=TRUE))
+        tmp <- merge(
+            tmp, barsize,
+            by='tissue', all.x=TRUE, all.y=FALSE 
+        )
+
+        fig <- plot_dots_and_bars(
+            tmp[order(tmp[['mean_bar']], decreasing = TRUE),],  # sort
+            x='tissue',
+            y='cq_conf',
+            color='sample_id',
+            ymin='min_bar',
+            ymax='max_bar',
+            log_y=FALSE
+        )
+        if (showfig) { print(fig) }
+        savefig(file.path(wd, opt[['figures-dir']], 'qc', paste0('cq_conf-', gene, '.png')),
+                width=1600, dpi=400,
+                troubleshooting=troubleshooting)
+    }
+}
+
+
 #' Draw Fold Changes
 #' 
 draw_fold_changes <- function(
@@ -101,14 +149,14 @@ draw_fold_changes <- function(
         barsize <- dct_table %>%
             group_by(tissue) %>%
             summarize(min_fold_change=min(!!sym(fold_change_col), na.rm=TRUE),
-                      mean_fold_change=min(!!sym(fold_change_col), na.rm=TRUE),
+                      mean_fold_change=mean(!!sym(fold_change_col), na.rm=TRUE),
                       max_fold_change=max(!!sym(fold_change_col), na.rm=TRUE))
         tmp <- merge(
             dct_table, barsize,
             by='tissue', all.x=TRUE, all.y=FALSE 
         )
 
-        fig <- plot_fold_change(
+        fig <- plot_dots_and_bars(
             tmp[order(tmp[['mean_fold_change']], decreasing = TRUE),],  # sort
             x='tissue',
             y=fold_change_col,

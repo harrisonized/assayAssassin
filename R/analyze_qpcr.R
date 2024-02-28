@@ -65,7 +65,7 @@ control_genes <- strsplit(opt[['control-genes']], ';')[[1]]
 
 # Start Log
 start_time = Sys.time()
-log <- log_open(paste0("plot_qpcr-",
+log <- log_open(paste0("analyze_qpcr-",
                        strftime(start_time, format="%Y%m%d_%H%M%S"), '.log'))
 log_print(paste('Script started at:', start_time))
 

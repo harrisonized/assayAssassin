@@ -5,76 +5,41 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
 import::here(file.path(wd, 'R', 'tools', 'file_io.R'),
     'savefig', .character_only=TRUE)
 import::here(file.path(wd, 'R', 'tools', 'plotting.R'),
-    'plot_heatmap', 'plot_amp_curves', 'plot_dots_and_bars', .character_only=TRUE)
+    'plot_heatmap', 'plot_scatter', 'plot_lines', 'plot_dots_and_bars',
+    .character_only=TRUE)
 
 ## Functions
+## draw_cq_conf_scatter
+## draw_cq_conf_dots
 ## draw_heatmaps
 ## draw_amp_curves
-## draw_cq_conf_dots
 ## draw_fold_changes
 
 
-#' Draw CT Heatmaps
+#' Draw CQ Conf Scatter
 #' 
-draw_heatmaps <- function(
+draw_cq_conf_scatter <- function(
     results,
     dirpath,
     value='ct',
-    min_cq_conf=0.75,
     troubleshooting=FALSE,
     showfig=FALSE
 ) {
     plate_ids <- sort(unique(results[['plate_id']]))
     for (plate_id in plate_ids) {
-        tmp <- results
-        tmp[(tmp[['cq_conf']] <= min_cq_conf), 'ct'] <- NA
-        plate <- df_to_plate(
-            tmp[(tmp['plate_id']==plate_id), ],
-            value=value,
-            num_wells=96
+
+        fig <- plot_scatter(
+            results[(results['plate_id']==plate_id), ],
+            x=value,
+            y='cq_conf',
+            color='tissue',
+            xlabel=value,
+            ylabel='cq confidence',
+            title=paste('Quality Control for', value)
         )
-
-        fig <- plot_heatmap(plate,
-            show_xlabel=FALSE,
-            show_ylabel=FALSE,
-            title=paste(value, 'for plate', plate_id),
-            annotations=TRUE, digits=2)
         if (showfig) { print(fig) }
-        savefig(file.path(dirpath, plate_id, paste0('heatmap-', value, '-', plate_id, '.png')),
+        savefig(file.path(dirpath, 'qc', plate_id, paste0('scatter-cq_conf-', value, '-', plate_id, '.png')),
                 dpi=400,
-                troubleshooting=troubleshooting)
-    }
-}
-
-
-#' Draw Amp Curves
-#' 
-draw_amp_curves <- function(
-    amp_data,
-    dirpath,
-    ct_thresholds=NULL,
-    metadata_cols=c("tissue", "gene"),
-    troubleshooting=FALSE,
-    showfig=FALSE
-) {
-    plate_ids <- sort(unique(amp_data[['plate_id']]))
-    combinations <- expand.grid(
-        plate_id=plate_ids,
-        colname=metadata_cols,
-        stringsAsFactors=FALSE
-    )
-
-    for (row in rownames(combinations)) {
-        plate_id <- combinations[row, c('plate_id')]
-        group <- combinations[row, c('colname')]
-        ct_threshold <- ct_thresholds[[plate_id]]
-
-        subset <- amp_data[(amp_data['plate_id']==plate_id), ]
-        
-        fig <- plot_amp_curves(subset, ct_threshold, color=group, plate_id= plate_id)
-        if (showfig) { print(fig) }
-        savefig(file.path(dirpath, plate_id, 'amp_data', paste0('delta_rn-', group, '-', plate_id, '.png')),
-                height=1000, width=1600, dpi=400,
                 troubleshooting=troubleshooting)
     }
 }
@@ -117,6 +82,82 @@ draw_cq_conf_dots <- function(
         if (showfig) { print(fig) }
         savefig(file.path(wd, opt[['figures-dir']], 'qc', paste0('cq_conf-', gene, '.png')),
                 width=1600, dpi=400,
+                troubleshooting=troubleshooting)
+    }
+}
+
+
+#' Draw Heatmaps
+#' 
+draw_heatmaps <- function(
+    results,
+    dirpath,
+    value='ct',
+    min_cq_conf=0.75,
+    troubleshooting=FALSE,
+    showfig=FALSE
+) {
+    plate_ids <- sort(unique(results[['plate_id']]))
+    for (plate_id in plate_ids) {
+        tmp <- results
+        tmp[(tmp[['cq_conf']] <= min_cq_conf), 'ct'] <- NA
+        plate <- df_to_plate(
+            tmp[(tmp['plate_id']==plate_id), ],
+            value=value,
+            num_wells=96
+        )
+
+        fig <- plot_heatmap(plate,
+            show_xlabel=FALSE,
+            show_ylabel=FALSE,
+            title=paste(value, 'for plate', plate_id),
+            annotations=TRUE, digits=2)
+        if (showfig) { print(fig) }
+        savefig(file.path(dirpath, 'qc', plate_id, paste0('heatmap-', value, '-', plate_id, '.png')),
+                dpi=400,
+                troubleshooting=troubleshooting)
+    }
+}
+
+
+#' Draw Amp Curves
+#' 
+draw_amp_curves <- function(
+    amp_data,
+    dirpath,
+    ct_thresholds=NULL,
+    metadata_cols=c("tissue", "gene"),
+    troubleshooting=FALSE,
+    showfig=FALSE
+) {
+    plate_ids <- sort(unique(amp_data[['plate_id']]))
+    combinations <- expand.grid(
+        plate_id=plate_ids,
+        colname=metadata_cols,
+        stringsAsFactors=FALSE
+    )
+
+    for (row in rownames(combinations)) {
+        plate_id <- combinations[row, c('plate_id')]
+        group <- combinations[row, c('colname')]
+        ct_threshold <- ct_thresholds[[plate_id]]
+
+        subset <- amp_data[(amp_data['plate_id']==plate_id), ]
+
+        fig <- plot_lines(
+            subset,
+            x='cycle',
+            y='delta_rn',
+            group='row_id',
+            color=group,
+            thresholds=ct_threshold,
+            xlabel='Cycle Number',
+            ylabel='Delta Rn',
+            title=paste('Amplification Data for plate', plate_id)
+        )
+        if (showfig) { print(fig) }
+        savefig(file.path(dirpath, 'qc', plate_id, 'amp_data', paste0('delta_rn-', group, '-', plate_id, '.png')),
+                height=1000, width=1600, dpi=400,
                 troubleshooting=troubleshooting)
     }
 }

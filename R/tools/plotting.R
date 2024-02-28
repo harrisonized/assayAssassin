@@ -9,57 +9,10 @@ import::here(file.path(wd, 'R', 'tools', 'df_tools.R'),
     'rev_df', 'smelt', .character_only=TRUE)
 
 ## Functions
-## plot_bar
 ## plot_heatmap
-## plot_amp_curves
+## plot_scatter
+## plot_lines
 ## plot_dots_and_bars
-
-
-#' Plot Bar
-#' 
-#' @description Plot a simple bar plot.
-#' 
-#' @export
-plot_bar <- function(
-    df,
-    x='cell_type',
-    y='value',
-    group.by=NULL,  # gene of interest
-    fill=NULL,  # steelblue, overwrites group.by
-    xlabel=NULL,
-    ylabel="Number of Genes",
-    title="Number of Cells",
-    xaxis_angle=45,
-    legend_position='bottom',
-    sort=TRUE
-) {
-
-    # color
-    if (is.null(group.by)) { color <- NULL } else { color <- sym(group.by) }
-    if (is.null(fill)) {
-        bar <- geom_bar(stat="identity")
-    } else {
-        bar <- geom_bar(stat="identity", fill=fill)
-    }
-
-    # plot base
-    if (sort) {
-        base_plot <- ggplot(data=df,
-            aes(x=reorder(.data[[x]], .data[[y]], decreasing=TRUE),
-                y=.data[[y]], fill=!!color ))
-    } else {
-        base_plot <- ggplot(data=df,
-            aes(x=.data[[x]], y=.data[[y]], fill=!!color ))
-    }
-
-    fig <- base_plot +
-        bar +
-        labs(x=xlabel, y=ylabel, title=title) +
-        scale_x_discrete( guide=guide_axis(angle = xaxis_angle) ) +
-        theme(legend.position=legend_position)
-
-    return(fig)
-}
 
 
 #' Plot a heatmap
@@ -150,23 +103,96 @@ plot_heatmap <- function(
 }
 
 
-#' Plot Amp Curves
+#' Plot Scatter
 #' 
-plot_amp_curves <- function(
-    amp_data,
-    ct_threshold=NA,
-    color='row_id',
-    plate_id='1'
+plot_scatter <- function(
+    df,
+    x,
+    y,
+    color=NULL,  # NULL for no groups
+    xlabel=NULL,
+    ylabel=NULL,
+    title=NULL,
+    alpha=0.7,
+    point_size=0.5,
+    log_x=FALSE,
+    log_y=FALSE,
+    legend_large_circle=TRUE
 ) {
+
+    # group.by
+    if (is.null(color)) { colour <- NULL } else { colour <- sym(color) }
+
+    # scale axes
+    if (log_x) {
+        scale_x <- scale_x_log10(
+            breaks = trans_breaks("log10", function(x) 10^x),
+            labels = trans_format("log10", math_format(10^.x))
+        )
+    } else { scale_x <- list() }
+    if (log_y) {
+        scale_y <- scale_y_log10(
+            breaks = trans_breaks("log10", function(x) 10^x),
+            labels = trans_format("log10", math_format(10^.x))
+        )
+    } else { scale_y <- list() }
+
+    if (legend_large_circle) {
+        guide <- guides( colour=guide_legend(override.aes=list(size=4L,alpha=1)) )
+    } else {
+        guide <- list()
+    }
+
+    # plot
+    fig <- ggplot(df,
+              aes(x=.data[[x]], y=.data[[y]],
+                  colour=!!colour) ) +
+       geom_point(alpha=alpha, size=point_size, na.rm=TRUE) +
+       labs(x=xlabel, y=ylabel, title=title) + 
+       guide +
+       scale_x +
+       scale_y
+
+    return(fig)
+}
+
+
+#' Plot Lines
+#' 
+plot_lines <- function(
+    df,
+    x,
+    y,
+    group='gene',
+    color='row_id',
+    thresholds=NA,
+    xlabel=NULL,
+    ylabel=NULL,
+    title=NULL,
+    log_y=TRUE
+) {
+    if (log_y) {
+        scale_y <- scale_y_continuous(
+            trans='log10',
+            labels = function(x) round(x, 5),
+            limits = c(0.00001, 15)
+        )
+    } else { scale_y <- list() }
+
+    if (!is.na(thresholds)) {
+        hline <- geom_hline(yintercept=thresholds, colour='red')
+    } else {
+        hline <- list()
+    }
     
-    fig <- ggplot(amp_data[(amp_data['delta_rn'] > 0), ],
-        aes(x=.data[['cycle']], y=.data[['delta_rn']],
-            group=row_id,
-            colour=!!sym(color))) +
+    fig <- ggplot(df[(df[[y]] > 0), ],
+        aes(x=.data[[x]], y=.data[[y]],
+            group=.data[[group]],
+            colour=.data[[color]])) +
         geom_line(alpha=0.7, size=0.5, na.rm=TRUE) +
-        geom_hline(yintercept=ct_threshold, colour='red') +
-        labs(x='Cycle Number', y='Delta Rn', title=paste("Amplification Curve for Plate", plate_id)) +
-        scale_y_continuous(trans='log10', labels = function(x) round(x, 5), limits = c(0.00001, 15))
+        hline +
+        labs(x=xlabel, y=ylabel, title=title) +
+        scale_y
 
     return(fig)
 }

@@ -11,7 +11,8 @@ import::from(magrittr, '%>%')
 import::from(file.path(wd, 'R', 'functions', 'reader.R'),
     'read_qpcr', .character_only=TRUE)
 import::from(file.path(wd, 'R', 'functions', 'draw_plots.R'),
-    'draw_heatmaps', 'draw_amp_curves', 'draw_fold_changes', 'draw_cq_conf_dots',
+    'draw_cq_conf_scatter', 'draw_cq_conf_dots',
+    'draw_heatmaps', 'draw_amp_curves', 'draw_fold_changes',
     .character_only=TRUE)
 import::from(file.path(wd, 'R', 'functions', 'computations.R'),
     'ct_thresholds_from_results', 'dct_table_from_results', .character_only=TRUE)
@@ -78,11 +79,32 @@ log_print(paste(Sys.time(), 'Reading data...'))
 c(results, amp_data, plate_ids, metadata_cols) %<-% read_qpcr(
     file.path(wd, opt[['input-dir']])
 )
-ct_thresholds <- ct_thresholds_from_results(results)
 
 
 # ----------------------------------------------------------------------
-# QC for Individual Plates
+# QC of CQ conf
+
+log_print(paste(Sys.time(), 'Drawing QC Plots...'))
+
+draw_cq_conf_scatter(
+    results,
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    value='ct',
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
+
+draw_cq_conf_dots(
+    results,
+    genes=c('Dnase1l1', 'Actin', 'Hprt'),
+    dirpath=file.path(wd, opt[['figures-dir']]),
+    troubleshooting=troubleshooting,
+    showfig=troubleshooting
+)
+
+
+# ----------------------------------------------------------------------
+# Amplification Data
 
 log_print(paste(Sys.time(), 'Drawing CT heatmaps...'))
 
@@ -104,6 +126,7 @@ draw_heatmaps(
     showfig=troubleshooting
 )
 
+
 log_print(paste(Sys.time(), 'Drawing amp curves...'))
 
 amp_data <- within(amp_data,
@@ -115,6 +138,7 @@ amp_data <- merge(
     by=c('sample_id', 'well'), all.x=TRUE, all.y=FALSE 
 )
 
+ct_thresholds <- ct_thresholds_from_results(results)
 draw_amp_curves(
     amp_data[(amp_data[['cq_conf']] > opt[['min-cq-conf']]), ],
     dirpath=file.path(wd, opt[['figures-dir']]),
@@ -123,21 +147,6 @@ draw_amp_curves(
     troubleshooting=troubleshooting,
     showfig=troubleshooting
 )
-
-
-# ----------------------------------------------------------------------
-# QC for the Entire Run
-
-
-draw_cq_conf_dots(
-    results,
-    genes=c('Dnase1l1', 'Actin', 'Hprt'),
-    dirpath=file.path(wd, opt[['figures-dir']]),
-    troubleshooting=troubleshooting,
-    showfig=troubleshooting
-)
-
-# to do: add scatterplot of ct vs. cq_conf
 
 
 # ----------------------------------------------------------------------

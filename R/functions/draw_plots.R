@@ -108,8 +108,8 @@ draw_heatmaps <- function(
         )
 
         fig <- plot_heatmap(plate,
-            show_xlabel=FALSE,
-            show_ylabel=FALSE,
+            xlabel=NULL,
+            ylabel=NULL,
             title=paste(value, 'for plate', plate_id),
             annotations=TRUE, digits=2)
         if (showfig) { print(fig) }

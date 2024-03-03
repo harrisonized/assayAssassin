@@ -40,8 +40,6 @@ plot_heatmap <- function(
     xlabel=NULL,
     ylabel=NULL,
     title=NULL,
-    show_xlabel=TRUE,
-    show_ylabel=TRUE,
     annotations=FALSE,
     scientific_notation=FALSE,
     digits=1
@@ -50,15 +48,15 @@ plot_heatmap <- function(
     tab <- smelt(rev_df(df))  # reshape
 
     # axis labels
-    if (show_xlabel) {
-        xlabel = element_text()
+    if (!is.null(xlabel)) {
+        xtitle = element_text()
     } else {
-        xlabel = element_blank()
+        xtitle = element_blank()
     }
-    if (show_ylabel) {
-        ylabel = element_text()
+    if (!is.null(ylabel)) {
+        ytitle = element_text()
     } else {
-        ylabel = element_blank()
+        ytitle = element_blank()
     }
 
     # annotations
@@ -85,10 +83,10 @@ plot_heatmap <- function(
         geom_tile(color="white", lwd=0.3, linetype=1, na.rm=FALSE) +
         scale_y_discrete(limits=rev) +
         coord_fixed(expand=TRUE) +
-        labs(title = title) +
+        labs(title = title, x=xlabel, y=ylabel) +
         theme(plot.title = element_text(size = 10),
-              axis.title.x = xlabel,
-              axis.title.y = ylabel) +
+              axis.title.x = xtitle,
+              axis.title.y = ytitle) +
         scale_fill_gradient(low="#FFF8F8", high="#A50026") +
         if (annotations) {
             geom_text(

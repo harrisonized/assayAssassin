@@ -201,12 +201,13 @@ draw_fold_changes <- function(
             tmp[order(tmp[['mean_fold_change']], decreasing = TRUE),],  # sort
             x='tissue',
             y=fold_change_col,
+            ylabel='Fold Difference',
             color='sample_id',
             title=paste("Relative Expression of", sample_gene_name, "vs.", control_gene_name)
         )
         if (showfig) { print(fig) }
         savefig(file.path(wd, opt[['figures-dir']], paste0(fold_change_col, '.png')),
-                width=1600, dpi=400,
+                height=800, width=1600, dpi=400,
                 troubleshooting=troubleshooting)
     }
     

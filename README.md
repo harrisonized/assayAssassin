@@ -1,6 +1,6 @@
-## Leige Waffle
+## Assay Assassin
 
-Named after my favorite Blue Bottle pastry, the purpose of this repository is to handle data wrangling and visualization any plate-based assays, such as qPCR and ELISAs.
+The purpose of this repository is to handle data wrangling and visualization any plate-based assays, such as qPCR and ELISAs.
 
 ## Copyright
 

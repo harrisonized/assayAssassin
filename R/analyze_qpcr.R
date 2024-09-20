@@ -1,6 +1,6 @@
 ## Basic qPCR analysis
 
-wd = dirname(this.path::here())  # wd = '~/github/R/leigeWaffle'
+wd = dirname(this.path::here())  # wd = '~/github/R/assayAssassin'
 suppressPackageStartupMessages(library('dplyr'))
 suppressPackageStartupMessages(library('ggplot2'))
 library('zeallot')  # %<-%
@@ -23,16 +23,16 @@ import::from(file.path(wd, 'R', 'functions', 'computations.R'),
 
 # args
 option_list = list(
-    make_option(c("-i", "--input-dir"), default='data/input',
-                metavar='data/input',
+    make_option(c("-i", "--input-dir"), default='data/qpcr/input',
+                metavar='data/qpcr/input',
                 type="character",help="path/to/input/dir"),
    
-    make_option(c("-o", "--output-dir"), default="data/output",
-                metavar="data/output", type="character",
+    make_option(c("-o", "--output-dir"), default="data/qpcr/output",
+                metavar="data/qpcr/output", type="character",
                 help="set the output directory for the data"),
 
-    make_option(c("-f", "--figures-dir"), default="figures/output",
-                metavar="figures/output", type="character",
+    make_option(c("-f", "--figures-dir"), default="figures/qpcr/output",
+                metavar="figures/qpcr/output", type="character",
                 help="set the output directory for the figures"),
 
     make_option(c("-c", "--min-cq-conf"), default=0.75,

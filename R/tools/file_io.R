@@ -57,7 +57,7 @@ savefig <- function(
     filepath,
     fig=NULL,
     height=800, width=1200, dpi=300, units="px", scaling=0.5,
-    makedir=FALSE,
+    makedir=TRUE,
     troubleshooting=FALSE,
     lib='ggplot',  # choose: ggplot, grid
     default_ext = '.png'

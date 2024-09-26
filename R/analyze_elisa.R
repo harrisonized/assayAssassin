@@ -78,11 +78,12 @@ df <- read_elisa(input_path)
 log_print(paste(Sys.time(), 'Plotting...'))
 fig <- plot_violin(
     df[(df[['develop_time']]=='45 min'), ],
-    x='treatment_length', y='abs', group_by='genotype',
+    x='treatment_length', y='abs', group_by='treatment',
     ylabel='Absorbance',
     hover_data=c(
         'plate_id','sample_id', 'genotype', 'treatment', 'treatment_length', 'abs'
-    )
+    ),
+    sort=FALSE
 )
 
 # save
@@ -90,7 +91,7 @@ if (!troubleshooting) {
     save_fig(
         fig=fig,
         dirpath=file.path(wd, opt[['figures-dir']]),
-        filename='violin-abs_by_age',
+        filename='violin-age-abs-group_by_treatment',
         save_html=opt[['save-html']]
     )
 }
